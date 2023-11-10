@@ -39,7 +39,7 @@ public class Main {
         // Deshabilitar SSLv3 per clients Android
         java.lang.System.setProperty("jdk.tls.client.protocols", "TLSv1,TLSv1.1,TLSv1.2");
 
-        ChatServer server = new ChatServer(port);
+        CrazyServer server = new CrazyServer(port);
         server.runServerBucle();
     }
 

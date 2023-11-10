@@ -15,7 +15,7 @@ public class CrazyServer extends WebSocketServer {
 
     static BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 
-    public ChatServer (int port) {
+    public CrazyServer (int port) {
         super(new InetSocketAddress(port));
     }
 
@@ -57,9 +57,8 @@ public class CrazyServer extends WebSocketServer {
         String initiate[] = {"cd", "~/dev/rpi-rgb-led-matrix"};
         String execute[] = {"examples-api-use/demo", "-D0", "--led-cols=64", "--led-rows=64", "--led-slowdown-gpio=4", "--led-no-hardware-pulse"};
     
-        orderseRPI(initiate);
+        ordersRPI(initiate);
         ordersRPI(execute);
-        
     }
 
     @Override
