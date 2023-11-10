@@ -29,7 +29,7 @@ public class CrazyServer extends WebSocketServer {
             Process process;
             process= builder.start();
             process.waitFor();
-            builder.command("bash", "-c", "./examples-api-use/demo -D0 --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse");
+            builder.command("bash", "-c", "examples-api-use/demo -D0 --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse");
             process = builder.start();
             process.waitFor();
 
