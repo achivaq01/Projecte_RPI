@@ -1,0 +1,67 @@
+@import url("/shadows/common.css");
+
+.root {
+    background-color: white;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    position: absolute;
+    transform: translate3d(100%, 0, 0);
+    width: 100%;
+}
+
+.row {
+    display: flex;
+}
+
+.padding {
+    padding: 8px;
+}
+
+#connectionInfo {
+    flex-grow: 2;
+}
+
+#chatArea {
+    flex-grow: 1;
+    position: relative;
+}
+
+#messages {
+    bottom: 0;
+    left: 0;
+    overflow-y: auto;
+    position: absolute;
+    right: 145px;
+    scroll-behavior: smooth; 
+    top: 0;
+}
+
+#clientsList {
+    background-color: #f0f0f0;
+    bottom: 0;
+    overflow-y: auto;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 145px;
+}
+
+.client {
+    cursor: pointer;
+    padding: 4px;
+}
+
+.clientSelected {
+    background-color: rgb(106, 179, 232);
+    color: white;
+}
+
+#inputMessage {
+    margin-left: 8px;
+    width: calc(100% - 100px);
+}
+
+#buttonSend, #buttonDisconnect {
+    margin-left: 8px;
+}
