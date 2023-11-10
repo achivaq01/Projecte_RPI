@@ -11,70 +11,12 @@ import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 import org.json.JSONObject;
 
-public class ChatServer extends WebSocketServer {
+public class CrazyServer extends WebSocketServer {
 
     static BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 
     public ChatServer (int port) {
         super(new InetSocketAddress(port));
-    }
-
-    public void passwordRPI(/*String user, String host, */String password) {
-
-        try {
-            /*
-            String[] command = {"ssh", "-t", user + "@" + host};
-            ProcessBuilder processBuilder = new ProcessBuilder(command);
-            Process process = processBuilder.start();
-            */
-            // Get input and error streams
-            BufferedReader inputReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-
-            // Send password to the ssh process
-            process.getOutputStream().write((password + "\n").getBytes());
-            process.getOutputStream().flush();
-
-            // Read the output and errors concurrently
-            Thread outputThread = new Thread(() -> {
-                try {
-                    String line;
-                    while ((line = inputReader.readLine()) != null) {
-                        System.out.println(line);
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
-
-            Thread errorThread = new Thread(() -> {
-                try {
-                    String line;
-                    while ((line = errorReader.readLine()) != null) {
-                        System.err.println(line);
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
-
-            // Start the output and error threads
-            outputThread.start();
-            errorThread.start();
-
-            // Wait for the process to finish
-            int exitCode = process.waitFor();
-
-            // Close the streams
-            inputReader.close();
-            errorReader.close();
-
-            // Print the exit code
-            System.out.println("Exit Code: " + exitCode);
-
-        } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
-        }
     }
 
     public void ordersRPI(String cmd[]) {
@@ -114,9 +56,7 @@ public class ChatServer extends WebSocketServer {
 
         String initiate[] = {"cd", "~/dev/rpi-rgb-led-matrix"};
         String execute[] = {"examples-api-use/demo", "-D0", "--led-cols=64", "--led-rows=64", "--led-slowdown-gpio=4", "--led-no-hardware-pulse"};
-        
-        // connectRPI("ieti", "192.168.0.21", "ieti");
-        passwordRPI("ieti");
+    
         orderseRPI(initiate);
         ordersRPI(execute);
         
