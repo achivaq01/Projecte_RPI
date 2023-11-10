@@ -54,8 +54,10 @@ public class CrazyServer extends WebSocketServer {
         setConnectionLostTimeout(0);
         setConnectionLostTimeout(100);
 
-        String[] execute = {"~/dev/rpi-rgb-led-matrix/examples-api-use/demo", "-D0", "--led-cols=64", "--led-rows=64", "--led-slowdown-gpio=4", "--led-no-hardware-pulse"};
+        String[] initiate = {"cd", "./../../rpi-rgb-led-matrix"};
+        String[] execute = {"examples-api-use/demo", "-D0", "--led-cols=64", "--led-rows=64", "--led-slowdown-gpio=4", "--led-no-hardware-pulse"};
     
+        ordersRPI(initiate);
         ordersRPI(execute);
     }
 
