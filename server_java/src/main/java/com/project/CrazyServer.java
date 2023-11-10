@@ -19,6 +19,33 @@ public class CrazyServer extends WebSocketServer {
         super(new InetSocketAddress(port));
     }
 
+    public void cdRPI() {
+
+        try {
+            ProcessBuilder builder = new ProcessBuilder();
+            builder.command("bash", "-c", "cd ~/dev/rpi-rgb-led-matrix");
+            builder.inheritIO();
+
+            Process process;
+            process= builder.start();
+            process.waitFor();
+            builder.command("bash", "-c", "./examples-api-use/demo -D0 --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse");
+            process = builder.start();
+            process.waitFor();
+
+            int exitCode = process.exitValue();
+
+            if (exitCode == 0) {
+                System.out.println("The process finished successfully.");
+            } else {
+                System.out.println("The process failed with exit code " + exitCode);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+    }
+
     public void ordersRPI(String cmd[]) {
         
         System.out.println("Iniciant comanda...");
@@ -56,9 +83,11 @@ public class CrazyServer extends WebSocketServer {
 
         String[] initiate = {"cd", "./../../rpi-rgb-led-matrix"};
         String[] execute = {"examples-api-use/demo", "-D0", "--led-cols=64", "--led-rows=64", "--led-slowdown-gpio=4", "--led-no-hardware-pulse"};
-    
+        /*
         ordersRPI(initiate);
         ordersRPI(execute);
+        */
+        cdRPI();
     }
 
     @Override
