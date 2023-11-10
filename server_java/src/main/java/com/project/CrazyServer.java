@@ -20,28 +20,37 @@ public class CrazyServer extends WebSocketServer {
     }
 
     public void cdRPI() {
-
         try {
-
+            // Set the working directory to "~/dev/rpi-rgb-led-matrix".
             ProcessBuilder builder = new ProcessBuilder();
-            builder.command("bash", "-c", "cd ~/dev/rpi-rgb-led-matrix");
+            builder.command("bash", "-c", "cd ~/dev/rpi-rgb-led-matrix && pwd");
             builder.inheritIO();
-
-            Process process;
-            process = builder.start();
+            Process process = builder.start();
             process.waitFor();
+
+            // Print the current directory after changing it.
+            try (InputStream inputStream = process.getInputStream();
+                 BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    System.out.println("Current Directory: " + line);
+                }
+            }
+
+            // Execute the "examples-api-use/demo" program.
             builder.command("bash", "-c", "examples-api-use/demo", "-D0", "--led-cols=64", "--led-rows=64", "--led-slowdown-gpio=4", "--led-no-hardware-pulse");
             process = builder.start();
             process.waitFor();
 
+            // Check the exit code of the process.
             int exitCode = process.exitValue();
 
+            // If the exit code is 0, the process finished successfully.
             if (exitCode == 0) {
                 System.out.println("The process finished successfully.");
             } else {
                 System.out.println("The process failed with exit code " + exitCode);
             }
-
         } catch (Exception e) {
             e.printStackTrace();
         }
