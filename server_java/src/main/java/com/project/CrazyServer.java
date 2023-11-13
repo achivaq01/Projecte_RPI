@@ -20,11 +20,15 @@ public class CrazyServer extends WebSocketServer {
         super(new InetSocketAddress(port));
     }
 
-    public void cdRPI(String command) {
+    public void cdRPI(boolean show) {
         try {
             // Set the working directory to "~/dev/rpi-rgb-led-matrix".
             ProcessBuilder builder = new ProcessBuilder();
-            builder.command(command);
+            if (show) {
+                builder.command("bash", "-c", "cd ~/dev/rpi-rgb-led-matrix && pwd ; text-scroller -f ~/dev/bitmap-fonts/bitmap/cherry/cherry-10-b.bdf --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse '" + Main.getLocalIPAddress() + "'");
+            } else {
+                builder.command("bash", "-c", "cd ~/dev/rpi-rgb-led-matrix && pwd ; text-scroller -f ~/dev/bitmap-fonts/bitmap/cherry/cherry-10-b.bdf --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse ''");
+            }
             builder.inheritIO();
             Process process = builder.start();
             process.waitFor();
@@ -90,15 +94,15 @@ public class CrazyServer extends WebSocketServer {
         
         setConnectionLostTimeout(0);
         setConnectionLostTimeout(100);
-        /*
+
         String[] initiate = {"cd", "./../../rpi-rgb-led-matrix"};
         String[] execute = {"examples-api-use/demo", "-D0", "--led-cols=64", "--led-rows=64", "--led-slowdown-gpio=4", "--led-no-hardware-pulse"};
+        /*
         ordersRPI(initiate);
         ordersRPI(execute);
         */
-
-        // Mostrem l'IP de la Wifi des de la pantalla del RPI
-        cdRPI("bash", "-c", "cd ~/dev/rpi-rgb-led-matrix && pwd ; text-scroller -f ~/dev/bitmap-fonts/bitmap/cherry/cherry-10-b.bdf --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse '" + Main.getLocalIPAddress() + "'");
+        // Mostrem la IP de la Wifi des de la pantalla de la RPI
+        cdRPI(true);
     }
 
     @Override
@@ -134,8 +138,8 @@ public class CrazyServer extends WebSocketServer {
         String host = conn.getRemoteSocketAddress().getAddress().getHostAddress();
         System.out.println("New client (" + clientId + "): " + host);
 
-        // Esborrem l'IP que surt a la pantalla del RPI
-        "bash", "-c", "cd ~/dev/rpi-rgb-led-matrix && pwd ; text-scroller -f ~/dev/bitmap-fonts/bitmap/cherry/cherry-10-b.bdf --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse ''"
+        // Esborrem la IP que es mostra en la pantalla de la RPI
+        cdRPI(false);
     }
 
     @Override
