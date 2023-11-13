@@ -24,7 +24,7 @@ public class CrazyServer extends WebSocketServer {
         try {
             // Set the working directory to "~/dev/rpi-rgb-led-matrix".
             ProcessBuilder builder = new ProcessBuilder();
-            builder.command("bash", "-c", "cd ~/dev/rpi-rgb-led-matrix && pwd ; text-scroller -f ~/dev/bitmap-fonts/bitmap/cherry/cherry-10-b.bdf --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse '" + getLocalIPAddress() + "'");
+            builder.command("bash", "-c", "cd ~/dev/rpi-rgb-led-matrix && pwd ; text-scroller -f ~/dev/bitmap-fonts/bitmap/cherry/cherry-10-b.bdf --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse '" + Main.getLocalIPAddress() + "'");
             builder.inheritIO();
             Process process = builder.start();
             process.waitFor();
