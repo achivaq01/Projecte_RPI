@@ -5,8 +5,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+import com.alibaba.fastjson.JSON;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
@@ -15,25 +21,25 @@ import org.json.JSONObject;
 public class CrazyServer extends WebSocketServer {
 
     static BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+    private ExecutorService executor;
+    private Process process;
 
     public CrazyServer (int port) {
         super(new InetSocketAddress(port));
+        executor = Executors.newSingleThreadExecutor();
+
     }
 
-    public void cdRPI(boolean show) {
+    public void cdRPI(String text) {
         try {
             // Set the working directory to "~/dev/rpi-rgb-led-matrix".
             ProcessBuilder builder = new ProcessBuilder();
-            if (show) {
-                builder.command("bash", "-c", "cd ~/dev/rpi-rgb-led-matrix && pwd ; text-scroller -f ~/dev/bitmap-fonts/bitmap/cherry/cherry-10-b.bdf --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse '" + Main.getLocalIPAddress() + "'");
-            } else {
-                builder.command("bash", "-c", "cd ~/dev/rpi-rgb-led-matrix && pwd ; text-scroller -f ~/dev/bitmap-fonts/bitmap/cherry/cherry-10-b.bdf --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse ''");
-            }
+            builder.command("bash", "-c", "cd ~/dev/rpi-rgb-led-matrix && pwd && text-scroller -f ~/dev/bitmap-fonts/bitmap/cherry/cherry-10-b.bdf --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse '" + text + "'");
             builder.inheritIO();
-            Process process = builder.start();
+
+            process = builder.start();
             process.waitFor();
 
-            // Print the current directory after changing it.
             try (InputStream inputStream = process.getInputStream();
                  BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
                 String line;
@@ -42,7 +48,6 @@ public class CrazyServer extends WebSocketServer {
                 }
             }
 
-            // Execute the "examples-api-use/demo" program.
             process = builder.start();
             process.waitFor();
 
@@ -55,10 +60,14 @@ public class CrazyServer extends WebSocketServer {
             } else {
                 System.out.println("The process failed with exit code " + exitCode);
             }
+
+            // ...
+            // Rest of your code
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println("Process Destroyed");
         }
     }
+
 
     public void ordersRPI(String cmd[]) {
         
@@ -102,7 +111,14 @@ public class CrazyServer extends WebSocketServer {
         ordersRPI(execute);
         */
         // Mostrem la IP de la Wifi des de la pantalla de la RPI
-        cdRPI(true);
+        executor.submit(() -> {
+            try {
+                cdRPI(Main.getLocalIPAddress());
+            } catch (SocketException | UnknownHostException e) {
+                return;
+            }
+        });
+
     }
 
     @Override
@@ -122,7 +138,7 @@ public class CrazyServer extends WebSocketServer {
         objId.put("type", "id");
         objId.put("from", "server");
         objId.put("value", clientId);
-        conn.send(objId.toString()); 
+        conn.send(objId.toString());
 
         // Enviem al client la llista amb tots els clients connectats
         sendList(conn);
@@ -139,7 +155,16 @@ public class CrazyServer extends WebSocketServer {
         System.out.println("New client (" + clientId + "): " + host);
 
         // Esborrem la IP que es mostra en la pantalla de la RPI
-        cdRPI(false);
+
+        process.destroyForcibly();
+        executor.shutdownNow();
+
+        try {
+            TimeUnit.SECONDS.sleep(1);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        executor = Executors.newSingleThreadExecutor();
     }
 
     @Override
@@ -156,12 +181,44 @@ public class CrazyServer extends WebSocketServer {
 
         // Mostrem per pantalla (servidor) la desconnexió
         System.out.println("Client disconnected '" + clientId + "'");
+        /*
+        executor.submit(() -> {
+            cdRPI();
+        });
+
+         */
     }
 
     @Override
     public void onMessage(WebSocket conn, String message) {
         // Quan arriba un missatge
         String clientId = getConnectionId(conn);
+
+        try {
+            if(process.isAlive()) {
+                process.destroyForcibly();
+                executor.shutdownNow();
+                TimeUnit.SECONDS.sleep(1);
+
+                executor = Executors.newSingleThreadExecutor();
+            }
+
+            JSONObject objRequest = new JSONObject(message);
+            String text = objRequest.getString("text");
+            System.out.println("Client " + clientId + " sends the message " + text + " from " + objRequest.getString("platform"));
+
+            executor.submit(() -> {
+                try {
+                    cdRPI(text + " from " + objRequest.getString("platform"));
+                } catch (Exception e) {
+                    return;
+                }
+            });
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        /*
         try {
             JSONObject objRequest = new JSONObject(message);
             String type = objRequest.getString("type");
@@ -201,6 +258,8 @@ public class CrazyServer extends WebSocketServer {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        */
+
     }
 
     @Override

@@ -34,7 +34,7 @@ public class Main {
 
         int port = 8888; 
         String localIp = getLocalIPAddress();
-        System.out.println("Local server IP: " + localIp);
+        System.out.println("Local server IP: " + localIp + ":" + port);
 
         // Deshabilitar SSLv3 per clients Android
         java.lang.System.setProperty("jdk.tls.client.protocols", "TLSv1,TLSv1.1,TLSv1.2");
