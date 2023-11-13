@@ -20,11 +20,11 @@ public class CrazyServer extends WebSocketServer {
         super(new InetSocketAddress(port));
     }
 
-    public void cdRPI() {
+    public void cdRPI(String command) {
         try {
             // Set the working directory to "~/dev/rpi-rgb-led-matrix".
             ProcessBuilder builder = new ProcessBuilder();
-            builder.command("bash", "-c", "cd ~/dev/rpi-rgb-led-matrix && pwd ; text-scroller -f ~/dev/bitmap-fonts/bitmap/cherry/cherry-10-b.bdf --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse '" + Main.getLocalIPAddress() + "'");
+            builder.command(command);
             builder.inheritIO();
             Process process = builder.start();
             process.waitFor();
@@ -90,14 +90,15 @@ public class CrazyServer extends WebSocketServer {
         
         setConnectionLostTimeout(0);
         setConnectionLostTimeout(100);
-
+        /*
         String[] initiate = {"cd", "./../../rpi-rgb-led-matrix"};
         String[] execute = {"examples-api-use/demo", "-D0", "--led-cols=64", "--led-rows=64", "--led-slowdown-gpio=4", "--led-no-hardware-pulse"};
-        /*
         ordersRPI(initiate);
         ordersRPI(execute);
         */
-        cdRPI();
+
+        // Mostrem l'IP de la Wifi des de la pantalla del RPI
+        cdRPI("bash", "-c", "cd ~/dev/rpi-rgb-led-matrix && pwd ; text-scroller -f ~/dev/bitmap-fonts/bitmap/cherry/cherry-10-b.bdf --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse '" + Main.getLocalIPAddress() + "'");
     }
 
     @Override
@@ -132,6 +133,9 @@ public class CrazyServer extends WebSocketServer {
         // Mostrem per pantalla (servidor) la nova connexió
         String host = conn.getRemoteSocketAddress().getAddress().getHostAddress();
         System.out.println("New client (" + clientId + "): " + host);
+
+        // Esborrem l'IP que surt a la pantalla del RPI
+        "bash", "-c", "cd ~/dev/rpi-rgb-led-matrix && pwd ; text-scroller -f ~/dev/bitmap-fonts/bitmap/cherry/cherry-10-b.bdf --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse ''"
     }
 
     @Override
