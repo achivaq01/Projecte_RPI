@@ -7,26 +7,30 @@ import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import com.alibaba.fastjson.JSON;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 import org.json.JSONObject;
+import java.util.List;
+import java.util.Map;
+import java.util.ArrayList;
 
 public class CrazyServer extends WebSocketServer {
 
     static BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-    private ExecutorService executor;
     private Process process;
+    private ThreadManager manager;
+    private List<String[]> cList;
 
     public CrazyServer (int port) {
         super(new InetSocketAddress(port));
-        executor = Executors.newSingleThreadExecutor();
+        manager = new ThreadManager();
+        cList = new ArrayList<>();
 
     }
 
@@ -68,59 +72,32 @@ public class CrazyServer extends WebSocketServer {
         }
     }
 
-
-    public void ordersRPI(String cmd[]) {
-        
-        System.out.println("Iniciant comanda...");
- 
-        try {
-            // Objecte global Runtime
-            Runtime rt = java.lang.Runtime.getRuntime();
-            // Executar comanda en subprocess
-            Process p = rt.exec(cmd);
-            // Donem un temps d'execució
-            TimeUnit.SECONDS.sleep(5);
-            // El matem si encara no ha acabat
-            if( p.isAlive() ) p.destroy();
-            p.waitFor();
-            // Comprovem el resultat de l'execució
-            System.out.println("Comanda 1 exit code = " + p.exitValue());
- 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        // Finish
-        System.out.println("Comandes finalitzades.");
-    }
-
     @Override
     public void onStart() {
         // Quan el servidor s'inicia
         String host = getAddress().getAddress().getHostAddress();
         int port = getAddress().getPort();
+        manager.start();
+
         System.out.println("WebSockets server running at: ws://" + host + ":" + port);
         System.out.println("Type 'exit' to stop and exit server.");
-        
+
         setConnectionLostTimeout(0);
         setConnectionLostTimeout(100);
+        
+        manager.addQueue("echo first_message");
+        try {
+            String ip = Main.getLocalIPAddress();
+            String command = "cd ~/dev/rpi-rgb-led-matrix && pwd && text-scroller -f ~/dev/bitmap-fonts/bitmap/cherry/cherry-10-b.bdf --led-cols=64 --led-rows=64 --led-slowdown-gpio=2 --led-no-hardware-pulse '"+ ip +"'";
 
-        String[] initiate = {"cd", "./../../rpi-rgb-led-matrix"};
-        String[] execute = {"examples-api-use/demo", "-D0", "--led-cols=64", "--led-rows=64", "--led-slowdown-gpio=4", "--led-no-hardware-pulse"};
-        /*
-        ordersRPI(initiate);
-        ordersRPI(execute);
-        */
-        // Mostrem la IP de la Wifi des de la pantalla de la RPI
-        executor.submit(() -> {
-            try {
-                cdRPI(Main.getLocalIPAddress());
-            } catch (SocketException | UnknownHostException e) {
-                return;
-            }
-        });
+            manager.addQueue(command);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
     }
 
+    // TODO
     @Override
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
         // Quan un client es connecta
@@ -130,15 +107,8 @@ public class CrazyServer extends WebSocketServer {
         JSONObject objWlc = new JSONObject("{}");
         objWlc.put("type", "private");
         objWlc.put("from", "server");
-        objWlc.put("value", "Welcome to the chat server");
+        objWlc.put("value", "Welcome to CrazyDisplay");
         conn.send(objWlc.toString()); 
-
-        // Li enviem el seu identificador
-        JSONObject objId = new JSONObject("{}");
-        objId.put("type", "id");
-        objId.put("from", "server");
-        objId.put("value", clientId);
-        conn.send(objId.toString());
 
         // Enviem al client la llista amb tots els clients connectats
         sendList(conn);
@@ -156,15 +126,8 @@ public class CrazyServer extends WebSocketServer {
 
         // Esborrem la IP que es mostra en la pantalla de la RPI
 
-        process.destroyForcibly();
-        executor.shutdownNow();
+        manager.interrupt();
 
-        try {
-            TimeUnit.SECONDS.sleep(1);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-        executor = Executors.newSingleThreadExecutor();
     }
 
     @Override
@@ -195,70 +158,27 @@ public class CrazyServer extends WebSocketServer {
         String clientId = getConnectionId(conn);
 
         try {
-            if(process.isAlive()) {
-                process.destroyForcibly();
-                executor.shutdownNow();
-                TimeUnit.SECONDS.sleep(1);
-
-                executor = Executors.newSingleThreadExecutor();
-            }
-
             JSONObject objRequest = new JSONObject(message);
-            String text = objRequest.getString("text");
-            System.out.println("Client " + clientId + " sends the message " + text + " from " + objRequest.getString("platform"));
 
-            executor.submit(() -> {
-                try {
-                    cdRPI(text + " from " + objRequest.getString("platform"));
-                } catch (Exception e) {
-                    return;
-                }
-            });
+            if(objRequest.has("text")) {
+                String text = objRequest.getString("text");
+                String command = "cd ~/dev/rpi-rgb-led-matrix && pwd && text-scroller -f ~/dev/bitmap-fonts/bitmap/cherry/cherry-10-b.bdf --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse '"+ text +"'";
+                manager.addQueue(command);
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        /*
-        try {
-            JSONObject objRequest = new JSONObject(message);
-            String type = objRequest.getString("type");
+            } else if (objRequest.has("platform")) {
+                System.out.println(clientId + " is from " + objRequest.getString("platform"));
 
-            if (type.equalsIgnoreCase("list")) {
-                // El client demana la llista de tots els clients
-                System.out.println("Client '" + clientId + "'' requests list of clients");
+                cList.add(new String[]{clientId, objRequest.getString("platform")});
+
+            } else if (objRequest.get("type") == "list") {
                 sendList(conn);
-
-            } else if (type.equalsIgnoreCase("private")) {
-                // El client envia un missatge privat a un altre client
-                System.out.println("Client '" + clientId + "'' sends a private message");
-
-                JSONObject objResponse = new JSONObject("{}");
-                objResponse.put("type", "private");
-                objResponse.put("from", clientId);
-                objResponse.put("value", objRequest.getString("value"));
-
-                String destination = objRequest.getString("destination");
-                WebSocket desti = getClientById(destination);
-
-                if (desti != null) {
-                    desti.send(objResponse.toString()); 
-                }
-                
-            } else if (type.equalsIgnoreCase("broadcast")) {
-                // El client envia un missatge a tots els clients
-                System.out.println("Client '" + clientId + "'' sends a broadcast message to everyone");
-
-                JSONObject objResponse = new JSONObject("{}");
-                objResponse.put("type", "broadcast");
-                objResponse.put("from", clientId);
-                objResponse.put("value", objRequest.getString("value"));
-                broadcast(objResponse.toString());
             }
+            
+
 
         } catch (Exception e) {
             e.printStackTrace();
         }
-        */
 
     }
 
@@ -288,11 +208,13 @@ public class CrazyServer extends WebSocketServer {
     }
 
     public void sendList (WebSocket conn) {
-        JSONObject objResponse = new JSONObject("{}");
-        objResponse.put("type", "list");
-        objResponse.put("from", "server");
-        objResponse.put("list", getClients());
-        conn.send(objResponse.toString()); 
+        long[] count = getCounts(cList);
+
+        JSONObject list = new JSONObject("{}");
+        list.put("type", "list");
+        list.put("flutter", count[0]);
+        list.put("android", count[1]);
+        conn.send(list.toString()); 
     }
 
     public String getConnectionId (WebSocket connection) {
@@ -321,5 +243,23 @@ public class CrazyServer extends WebSocketServer {
         }
         
         return null;
+    }
+
+    private long[] getCounts(List<String[]> arrayList) {
+        Map<String, Long> valueCounts = arrayList.stream()
+                .filter(pair -> "Flutter".equals(pair[1]) || "Android".equals(pair[1]))
+                .collect(Collectors.groupingBy(pair -> pair[1], Collectors.counting()));
+
+        long[] counts = {0, 0};
+
+        valueCounts.forEach((value, count) -> {
+            if ("Flutter".equals(value)) {
+                counts[0] = count;
+            } else if ("Android".equals(value)) {
+                counts[1] = count;
+            }
+        });
+
+        return counts;
     }
 }
