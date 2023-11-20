@@ -160,7 +160,7 @@ public class CrazyServer extends WebSocketServer {
     public void onMessage(WebSocket conn, String message) {
         // Quan arriba un missatge
         String clientId = getConnectionId(conn);
-
+        System.out.println("Llega mensaje");
         try {
             JSONObject objRequest = new JSONObject(message);
 
