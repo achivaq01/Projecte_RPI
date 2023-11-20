@@ -176,7 +176,7 @@ public class CrazyServer extends WebSocketServer {
 
             } else if (objRequest.get("type") == "list") {
                 sendList(conn);
-            } else if (objRequest.get("type") == "image") {
+            } else if (objRequest.get("type").equals("image")) {
                 System.out.println("Esta en una imagen");
                 
                 byte[] decodedBytes = Base64.getDecoder().decode(objRequest.getString("img"));
