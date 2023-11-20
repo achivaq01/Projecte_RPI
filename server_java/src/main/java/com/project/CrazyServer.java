@@ -1,12 +1,15 @@
 package com.project;
 
 import java.io.BufferedReader;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -19,6 +22,7 @@ import org.json.JSONObject;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
+import java.util.Base64;
 
 public class CrazyServer extends WebSocketServer {
 
@@ -172,6 +176,12 @@ public class CrazyServer extends WebSocketServer {
 
             } else if (objRequest.get("type") == "list") {
                 sendList(conn);
+            } else if (objRequest.get("type") == "image") {
+                System.out.println("Esta en una imagen");
+                
+                byte[] decodedBytes = Base64.getDecoder().decode(objRequest.getString("img"));
+                Files.write(Paths.get("screenimage.png"), decodedBytes);
+                
             }
             
 
