@@ -181,7 +181,11 @@ public class CrazyServer extends WebSocketServer {
                 
                 byte[] decodedBytes = Base64.getDecoder().decode(objRequest.getString("img"));
                 Files.write(Paths.get("screenimage.png"), decodedBytes);
-                
+                String command = "cd ~/dev/rpi-rgb-led-matrix && pwd && led-image-viewer -C --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse ~/dev/server/Projecte_RPI/server_java/screenimage.png";
+
+                System.out.print("Antes de enviar comando imagen");
+                manager.addQueue(command);
+                System.out.print("Despues de enviar");
             }
             
 
