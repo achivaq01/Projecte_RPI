@@ -65,7 +65,7 @@ public class CrazyServer extends WebSocketServer {
             return;
             
         }
-        String printIpOnScreen = PRINT_MOVING_MESSAGE_ON_SCREEN.replace("MESSAGE", IP);
+        String printIpOnScreen = PRINT_MOVING_MESSAGE_ON_SCREEN.replace("MESSAGE", "HOLA SOY LA IP");
         
         log("WebSockets server running at: ws://" + HOST + ":" + PORT, UPDATE);
         log("Type 'exit' to stop and exit server.", UPDATE);
