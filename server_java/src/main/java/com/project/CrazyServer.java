@@ -36,23 +36,9 @@ public class CrazyServer extends WebSocketServer {
     private final String PRINT_IMAGE = "image";
     private final String LOGIN = "login";
     private final String LIST = "list";
-    
     private final String SERVER_PREFIX = "[SERVER]: ";
-    private final String PRINT_MOVING_MESSAGE_ON_SCREEN = "cd "
-            + "~/dev/rpi-rgb-led-matrix && pwd && text-scroller " 
-            + "-f ~/dev/bitmap-fonts/bitmap/cherry/cherry-10-b.bdf "
-            + "--led-cols=64 "
-            + "--led-rows=64 "
-            + "--led-slowdown-gpio=2 "
-            + "--led-no-hardware-pulse "
-            + "'MESSAGE'";
-    private final String PRINT_IMAGE_ON_SCREEN = "cd "
-            + "~/dev/rpi-rgb-led-matrix && pwd && led-image-viewer"
-            + "-C --led-cols=64 "
-            + "--led-rows=64 "
-            + "--led-slowdown-gpio=4 "
-            + "--led-no-hardware-pulse "
-            + "~/dev/server/Projecte_RPI/server_java/screenimage.png";
+    private final String PRINT_MOVING_MESSAGE_ON_SCREEN = "cd ~/dev/rpi-rgb-led-matrix && pwd && text-scroller -f ~/dev/bitmap-fonts/bitmap/cherry/cherry-10-b.bdf --led-cols=64 --led-rows=64 --led-slowdown-gpio=2 --led-no-hardware-pulse 'MESSAGE'";
+    private final String PRINT_IMAGE_ON_SCREEN = "cd ~/dev/rpi-rgb-led-matrix && pwd && led-image-viewer -C --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse ~/dev/server/Projecte_RPI/server_java/screenimage.png";
     private final String USERS_JSON_PATH = "data/users.json";
 
     static BufferedReader serverInput;
