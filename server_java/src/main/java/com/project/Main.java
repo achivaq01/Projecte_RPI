@@ -33,10 +33,6 @@ public class Main {
     public static void main (String[] args) throws InterruptedException, IOException {
 
         int port = 8888; 
-        String localIp = getLocalIPAddress();
-        System.out.println("Local server IP: " + localIp + ":" + port);
-
-        // Deshabilitar SSLv3 per clients Android
         java.lang.System.setProperty("jdk.tls.client.protocols", "TLSv1,TLSv1.1,TLSv1.2");
 
         CrazyServer server = new CrazyServer(port);

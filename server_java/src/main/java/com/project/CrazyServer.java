@@ -1,12 +1,14 @@
 package com.project;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.stream.Collectors;
 
@@ -14,11 +16,12 @@ import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 import org.json.JSONObject;
+import org.json.JSONArray;
+
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.Base64;
-import org.json.JSONException;
 
 public class CrazyServer extends WebSocketServer {
     private final String RESET = "\u001B[0m";
@@ -29,7 +32,8 @@ public class CrazyServer extends WebSocketServer {
     private final int ERROR = -1;
     private final int UPDATE = 0;
     private final int CONNECTION = 1;
-    private final String PRINT = "print";
+    private final String PRINT_STRING = "string";
+    private final String PRINT_IMAGE = "image";
     private final String LOGIN = "login";
     private final String LIST = "list";
     
@@ -42,6 +46,14 @@ public class CrazyServer extends WebSocketServer {
             + "--led-slowdown-gpio=2 "
             + "--led-no-hardware-pulse "
             + "'MESSAGE'";
+    private final String PRINT_IMAGE_ON_SCREEN = "cd "
+            + "~/dev/rpi-rgb-led-matrix && pwd && led-image-viewer"
+            + "-C --led-cols=64 "
+            + "--led-rows=64 "
+            + "--led-slowdown-gpio=4 "
+            + "--led-no-hardware-pulse "
+            + "~/dev/server/Projecte_RPI/server_java/screenimage.png";
+    private final String USERS_JSON_PATH = "data/users.json";
 
     static BufferedReader serverInput;
     private final ThreadManager threadManager;
@@ -76,7 +88,7 @@ public class CrazyServer extends WebSocketServer {
         setConnectionLostTimeout(100);
         
         threadManager.start();
-        threadManager.addQueue("echo ThreadManager started.");
+        threadManager.addQueue("echo " + IP);
         threadManager.addQueue(printIpOnScreen);
         
 
@@ -92,7 +104,7 @@ public class CrazyServer extends WebSocketServer {
         welcomeMessage.put("value", "Welcome to CrazyDisplay");
         connection.send(welcomeMessage.toString()); 
 
-        sendList(connection);
+        broadcast(sendList(connection).toString());
 
         JSONObject connectedMessage = new JSONObject("{}");
         connectedMessage.put("type", "connected");
@@ -128,53 +140,51 @@ public class CrazyServer extends WebSocketServer {
 
         log("Mensaje recivido de " + clientId, CONNECTION);        
         switch(receivedMessage.getString("type")) {
-            case PRINT:
+            case PRINT_STRING:
                 printMessage = PRINT_MOVING_MESSAGE_ON_SCREEN.replace("MESSAGE", receivedMessage.getString("text"));
                 threadManager.addQueue(printMessage);
                 break;
             
             case LOGIN:
-                clientList.add(new String[]{clientId, receivedMessage.getString("platform")});
-                log("Client " + clientId + "has succesfully logged in.", UPDATE);
+                String user = receivedMessage.getString("user");
+                String password = receivedMessage.getString("password");
+                String platform = receivedMessage.getString("platform");
+
+                JSONObject loggedInMessage = new JSONObject();
+                loggedInMessage.put("type", "login");
+
+                if(!login(user, password)) {
+                    log("Client " + clientId + " rejected.", CONNECTION);
+                    loggedInMessage.put("success", false);
+                    connection.send(loggedInMessage.toString());
+
+                    return;
+                }
+                
+                loggedInMessage.put("success", true);
+                connection.send(loggedInMessage.toString());
+
+                clientList.add(new String[]{clientId, platform});
+                log("Client " + clientId + "has succesfully logged in from " + platform + ".", CONNECTION);
                 break;
             
             case LIST:
                 log("Client list send to client " + clientId, CONNECTION);
-                sendList(connection);
+                connection.send(sendList(connection).toString());
                 break;
+
+            case PRINT_IMAGE:
+                byte[] decodedImage = Base64.getDecoder().decode(receivedMessage.getString("img"));
+                try {
+                    Files.write(Paths.get("screenimage.png"), decodedImage);
+                } catch (IOException e) {
+                    log("ERROR loading an image : \n" + e.getMessage(), ERROR);
+                }
+                printMessage = PRINT_IMAGE_ON_SCREEN;
+                threadManager.addQueue(printMessage);
+                break;
+
         }
-        
-        try {
-
-            if(receivedMessage.has("text")) {
-                String text = receivedMessage.getString("text");
-                String command = "cd ~/dev/rpi-rgb-led-matrix && pwd && text-scroller -f ~/dev/bitmap-fonts/bitmap/cherry/cherry-10-b.bdf --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse '"+ text +"'";
-                threadManager.addQueue(command);
-
-            } else if (receivedMessage.has("platform")) {
-                System.out.println(clientId + " is from " + receivedMessage.getString("platform"));
-
-                clientList.add(new String[]{clientId, receivedMessage.getString("platform")});
-
-            } else if (receivedMessage.get("type") == "list") {
-                sendList(connection);
-            } else if (receivedMessage.get("type").equals("image")) {
-                System.out.println("Esta en una imagen");
-                
-                byte[] decodedBytes = Base64.getDecoder().decode(receivedMessage.getString("img"));
-                Files.write(Paths.get("screenimage.png"), decodedBytes);
-                String command = "cd ~/dev/rpi-rgb-led-matrix && pwd && led-image-viewer -C --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse ~/dev/server/Projecte_RPI/server_java/screenimage.png";
-
-                System.out.print("Antes de enviar comando imagen");
-                threadManager.addQueue(command);
-                System.out.print("Despues de enviar");
-            }
-            
-
-
-        } catch (IOException | JSONException e) {
-        }
-
     }
 
     @Override
@@ -185,8 +195,9 @@ public class CrazyServer extends WebSocketServer {
 
     public void runServerBucle () {
         boolean running = true;
-        try {
-            System.out.println("Starting server");
+        try 
+        {
+            log("Starting Server...", UPDATE);
             start();
             while (running) {
                 String line;
@@ -195,20 +206,24 @@ public class CrazyServer extends WebSocketServer {
                     running = false;
                 }
             } 
-            System.out.println("Stopping server");
+            log("Stopping server...", UPDATE);
             stop(1000);
-        } catch (IOException | InterruptedException e) {
+        } 
+        catch (IOException | InterruptedException e) 
+        {
+            log("ERROR \n" + e.getMessage(), ERROR);
         }  
     }
 
-    public void sendList (WebSocket conn) {
+    public JSONObject sendList (WebSocket conn) {
         long[] count = getCounts(clientList);
 
         JSONObject list = new JSONObject("{}");
         list.put("type", "list");
         list.put("flutter", count[0]);
         list.put("android", count[1]);
-        conn.send(list.toString()); 
+        
+        return list;
     }
 
     public String getConnectionId (WebSocket connection) {
@@ -229,10 +244,10 @@ public class CrazyServer extends WebSocketServer {
     }
 
     public WebSocket getClientById (String clientId) {
-        for (WebSocket ws : getConnections()) {
-            String wsId = getConnectionId(ws);
+        for (WebSocket webSocket : getConnections()) {
+            String wsId = getConnectionId(webSocket);
             if (clientId.compareTo(wsId) == 0) {
-                return ws;
+                return webSocket;
             }               
         }
         
@@ -255,6 +270,28 @@ public class CrazyServer extends WebSocketServer {
         });
 
         return counts;
+    }
+
+    private boolean login(String user, String password) {
+        try {
+            String usersContent = new String(Files.readAllBytes(Path.of(USERS_JSON_PATH)));
+            JSONArray usersArray = new JSONArray(usersContent);
+
+            for(int i = 0; i < usersArray.length(); i++) {
+                final JSONObject arrayObject = usersArray.getJSONObject(i);
+                
+                if(user.equals(arrayObject.getString("user")) && password.equals(arrayObject.getString("password"))) {
+                    return true;
+                }
+            }
+
+            return false;
+
+        } catch (IOException e) {
+            log("ERROR\n" + e.getMessage(), ERROR);
+            return false;
+        }
+
     }
     
     private void log(String log, int type) {
@@ -279,9 +316,5 @@ public class CrazyServer extends WebSocketServer {
         }
         
         System.out.print(serverMessage + "\n");
-    }
-    
-    private void printMessage(JSONObject printRequest) {
-        //String context 
     }
 }

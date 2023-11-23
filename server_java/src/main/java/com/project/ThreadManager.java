@@ -29,7 +29,6 @@ class ThreadManager {
 
     private void executeCommands() {
         while (alive) {
-            System.out.println("The length of the queue is " + commandQueue.size());
             executeCommand();
             
             try {
