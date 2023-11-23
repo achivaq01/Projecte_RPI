@@ -20,6 +20,7 @@ import org.json.JSONArray;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.ArrayList;
 import java.util.Base64;
 
@@ -65,19 +66,22 @@ public class CrazyServer extends WebSocketServer {
             return;
             
         }
-        String printIpOnScreen = PRINT_MOVING_MESSAGE_ON_SCREEN.replace("MESSAGE", "HOLA SOY LA IP");
-        
+        threadManager.start();
+        String printIpOnScreen = PRINT_MOVING_MESSAGE_ON_SCREEN.replace("MESSAGE", IP);
+
         log("WebSockets server running at: ws://" + HOST + ":" + PORT, UPDATE);
         log("Type 'exit' to stop and exit server.", UPDATE);
 
         setConnectionLostTimeout(0);
         setConnectionLostTimeout(100);
         
-        threadManager.start();
-        threadManager.addQueue("echo " + IP);
-        threadManager.addQueue(printIpOnScreen);
-        
+        threadManager.addQueue("echo ThreadManager started!");
+        try {
+            TimeUnit.SECONDS.sleep(5);
+        } catch (InterruptedException e) {
+        }
 
+        threadManager.addQueue(printIpOnScreen);
     }
 
     @Override
@@ -144,7 +148,7 @@ public class CrazyServer extends WebSocketServer {
                     loggedInMessage.put("success", false);
                     connection.send(loggedInMessage.toString());
 
-                    return;
+                    break;
                 }
                 
                 loggedInMessage.put("success", true);
@@ -175,7 +179,7 @@ public class CrazyServer extends WebSocketServer {
 
     @Override
     public void onError(WebSocket conn, Exception ex) {
-        log(ex.getMessage(), ERROR);
+        log("ERROR" + ex.getMessage(), ERROR);
 
     }
 
