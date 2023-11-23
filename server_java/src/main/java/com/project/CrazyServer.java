@@ -100,7 +100,7 @@ public class CrazyServer extends WebSocketServer {
         connectedMessage.put("type", "connected");
         connectedMessage.put("from", "server");
         connectedMessage.put("id", clientId);
-        broadcast(connectedMessage.toString());
+        connection.send(connectedMessage.toString());
 
         String host = connection.getRemoteSocketAddress().getAddress().getHostAddress();
         log("New client (" + clientId + "): " + host, CONNECTION);
