@@ -1,20 +1,15 @@
 package com.project;
 
 import java.io.BufferedReader;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import com.alibaba.fastjson.JSON;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
@@ -23,183 +18,169 @@ import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.Base64;
+import org.json.JSONException;
 
 public class CrazyServer extends WebSocketServer {
+    private final String RESET = "\u001B[0m";
+    private final String RED = "\u001B[31m";
+    private final String GREEN = "\u001B[32m";
+    private final String YELLOW = "\u001B[33m";
+    
+    private final int ERROR = -1;
+    private final int UPDATE = 0;
+    private final int CONNECTION = 1;
+    private final String PRINT = "print";
+    private final String LOGIN = "login";
+    private final String LIST = "list";
+    
+    private final String SERVER_PREFIX = "[SERVER]: ";
+    private final String PRINT_MOVING_MESSAGE_ON_SCREEN = "cd "
+            + "~/dev/rpi-rgb-led-matrix && pwd && text-scroller " 
+            + "-f ~/dev/bitmap-fonts/bitmap/cherry/cherry-10-b.bdf "
+            + "--led-cols=64 "
+            + "--led-rows=64 "
+            + "--led-slowdown-gpio=2 "
+            + "--led-no-hardware-pulse "
+            + "'MESSAGE'";
 
-    static BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-    private Process process;
-    private ThreadManager manager;
-    private List<String[]> cList;
+    static BufferedReader serverInput;
+    private final ThreadManager threadManager;
+    private  final List<String[]> clientList;
 
     public CrazyServer (int port) {
         super(new InetSocketAddress(port));
-        manager = new ThreadManager();
-        cList = new ArrayList<>();
-
-    }
-
-    public void cdRPI(String text) {
-        try {
-            // Set the working directory to "~/dev/rpi-rgb-led-matrix".
-            ProcessBuilder builder = new ProcessBuilder();
-            builder.command("bash", "-c", "cd ~/dev/rpi-rgb-led-matrix && pwd && text-scroller -f ~/dev/bitmap-fonts/bitmap/cherry/cherry-10-b.bdf --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse '" + text + "'");
-            builder.inheritIO();
-
-            process = builder.start();
-            process.waitFor();
-
-            try (InputStream inputStream = process.getInputStream();
-                 BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    System.out.println("Current Directory: " + line);
-                }
-            }
-
-            process = builder.start();
-            process.waitFor();
-
-            // Check the exit code of the process.
-            int exitCode = process.exitValue();
-
-            // If the exit code is 0, the process finished successfully.
-            if (exitCode == 0) {
-                System.out.println("The process finished successfully.");
-            } else {
-                System.out.println("The process failed with exit code " + exitCode);
-            }
-
-            // ...
-            // Rest of your code
-        } catch (Exception e) {
-            System.out.println("Process Destroyed");
-        }
+        
+        threadManager = new ThreadManager();
+        clientList = new ArrayList<>();
+        serverInput = new BufferedReader(new InputStreamReader(System.in));
     }
 
     @Override
     public void onStart() {
-        // Quan el servidor s'inicia
-        String host = getAddress().getAddress().getHostAddress();
-        int port = getAddress().getPort();
-        manager.start();
-
-        System.out.println("WebSockets server running at: ws://" + host + ":" + port);
-        System.out.println("Type 'exit' to stop and exit server.");
+        final String HOST = getAddress().getAddress().getHostAddress();
+        final int PORT = getAddress().getPort();
+        final String IP;
+        
+        try{
+            IP = Main.getLocalIPAddress();
+        } catch (SocketException | UnknownHostException ex) {
+            return;
+            
+        }
+        String printIpOnScreen = PRINT_MOVING_MESSAGE_ON_SCREEN.replace("MESSAGE", IP);
+        
+        log("WebSockets server running at: ws://" + HOST + ":" + PORT, UPDATE);
+        log("Type 'exit' to stop and exit server.", UPDATE);
 
         setConnectionLostTimeout(0);
         setConnectionLostTimeout(100);
         
-        manager.addQueue("echo first_message");
-        try {
-            String ip = Main.getLocalIPAddress();
-            String command = "cd ~/dev/rpi-rgb-led-matrix && pwd && text-scroller -f ~/dev/bitmap-fonts/bitmap/cherry/cherry-10-b.bdf --led-cols=64 --led-rows=64 --led-slowdown-gpio=2 --led-no-hardware-pulse '"+ ip +"'";
-
-            manager.addQueue(command);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        threadManager.start();
+        threadManager.addQueue("echo ThreadManager started.");
+        threadManager.addQueue(printIpOnScreen);
+        
 
     }
 
-    // TODO
     @Override
-    public void onOpen(WebSocket conn, ClientHandshake handshake) {
-        // Quan un client es connecta
-        String clientId = getConnectionId(conn);
+    public void onOpen(WebSocket connection, ClientHandshake handshake) {
+        String clientId = getConnectionId(connection);
 
-        // Saludem personalment al nou client
-        JSONObject objWlc = new JSONObject("{}");
-        objWlc.put("type", "private");
-        objWlc.put("from", "server");
-        objWlc.put("value", "Welcome to CrazyDisplay");
-        conn.send(objWlc.toString()); 
+        JSONObject welcomeMessage = new JSONObject("{}");
+        welcomeMessage.put("type", "private");
+        welcomeMessage.put("from", "server");
+        welcomeMessage.put("value", "Welcome to CrazyDisplay");
+        connection.send(welcomeMessage.toString()); 
 
-        // Enviem al client la llista amb tots els clients connectats
-        sendList(conn);
+        sendList(connection);
 
-        // Enviem la direcció URI del nou client a tothom 
-        JSONObject objCln = new JSONObject("{}");
-        objCln.put("type", "connected");
-        objCln.put("from", "server");
-        objCln.put("id", clientId);
-        broadcast(objCln.toString());
+        JSONObject connectedMessage = new JSONObject("{}");
+        connectedMessage.put("type", "connected");
+        connectedMessage.put("from", "server");
+        connectedMessage.put("id", clientId);
+        broadcast(connectedMessage.toString());
 
-        // Mostrem per pantalla (servidor) la nova connexió
-        String host = conn.getRemoteSocketAddress().getAddress().getHostAddress();
-        System.out.println("New client (" + clientId + "): " + host);
+        String host = connection.getRemoteSocketAddress().getAddress().getHostAddress();
+        log("New client (" + clientId + "): " + host, CONNECTION);
 
-        // Esborrem la IP que es mostra en la pantalla de la RPI
-
-        manager.interrupt();
+        threadManager.interrupt();
 
     }
 
     @Override
     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
-        // Quan un client es desconnecta
         String clientId = getConnectionId(conn);
 
-        // Informem a tothom que el client s'ha desconnectat
-        JSONObject objCln = new JSONObject("{}");
-        objCln.put("type", "disconnected");
-        objCln.put("from", "server");
-        objCln.put("id", clientId);
-        broadcast(objCln.toString());
+        JSONObject connectionClosedMessage = new JSONObject("{}");
+        connectionClosedMessage.put("type", "disconnected");
+        connectionClosedMessage.put("from", "server");
+        connectionClosedMessage.put("id", clientId);
+        broadcast(connectionClosedMessage.toString());
 
-        // Mostrem per pantalla (servidor) la desconnexió
-        System.out.println("Client disconnected '" + clientId + "'");
-        /*
-        executor.submit(() -> {
-            cdRPI();
-        });
-
-         */
+        log("Client disconnected '" + clientId + "'", CONNECTION);
     }
 
     @Override
-    public void onMessage(WebSocket conn, String message) {
-        // Quan arriba un missatge
-        String clientId = getConnectionId(conn);
-        System.out.println("Llega mensaje");
+    public void onMessage(WebSocket connection, String message) {
+        String clientId = getConnectionId(connection);
+        JSONObject receivedMessage = new JSONObject(message);
+        String printMessage;
+
+        log("Mensaje recivido de " + clientId, CONNECTION);        
+        switch(receivedMessage.getString("type")) {
+            case PRINT:
+                printMessage = PRINT_MOVING_MESSAGE_ON_SCREEN.replace("MESSAGE", receivedMessage.getString("text"));
+                threadManager.addQueue(printMessage);
+                break;
+            
+            case LOGIN:
+                clientList.add(new String[]{clientId, receivedMessage.getString("platform")});
+                log("Client " + clientId + "has succesfully logged in.", UPDATE);
+                break;
+            
+            case LIST:
+                log("Client list send to client " + clientId, CONNECTION);
+                sendList(connection);
+                break;
+        }
+        
         try {
-            JSONObject objRequest = new JSONObject(message);
 
-            if(objRequest.has("text")) {
-                String text = objRequest.getString("text");
+            if(receivedMessage.has("text")) {
+                String text = receivedMessage.getString("text");
                 String command = "cd ~/dev/rpi-rgb-led-matrix && pwd && text-scroller -f ~/dev/bitmap-fonts/bitmap/cherry/cherry-10-b.bdf --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse '"+ text +"'";
-                manager.addQueue(command);
+                threadManager.addQueue(command);
 
-            } else if (objRequest.has("platform")) {
-                System.out.println(clientId + " is from " + objRequest.getString("platform"));
+            } else if (receivedMessage.has("platform")) {
+                System.out.println(clientId + " is from " + receivedMessage.getString("platform"));
 
-                cList.add(new String[]{clientId, objRequest.getString("platform")});
+                clientList.add(new String[]{clientId, receivedMessage.getString("platform")});
 
-            } else if (objRequest.get("type") == "list") {
-                sendList(conn);
-            } else if (objRequest.get("type").equals("image")) {
+            } else if (receivedMessage.get("type") == "list") {
+                sendList(connection);
+            } else if (receivedMessage.get("type").equals("image")) {
                 System.out.println("Esta en una imagen");
                 
-                byte[] decodedBytes = Base64.getDecoder().decode(objRequest.getString("img"));
+                byte[] decodedBytes = Base64.getDecoder().decode(receivedMessage.getString("img"));
                 Files.write(Paths.get("screenimage.png"), decodedBytes);
                 String command = "cd ~/dev/rpi-rgb-led-matrix && pwd && led-image-viewer -C --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse ~/dev/server/Projecte_RPI/server_java/screenimage.png";
 
                 System.out.print("Antes de enviar comando imagen");
-                manager.addQueue(command);
+                threadManager.addQueue(command);
                 System.out.print("Despues de enviar");
             }
             
 
 
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (IOException | JSONException e) {
         }
 
     }
 
     @Override
     public void onError(WebSocket conn, Exception ex) {
-        // Quan hi ha un error
-        ex.printStackTrace();
+        log(ex.getMessage(), ERROR);
+
     }
 
     public void runServerBucle () {
@@ -209,7 +190,7 @@ public class CrazyServer extends WebSocketServer {
             start();
             while (running) {
                 String line;
-                line = in.readLine();
+                line = serverInput.readLine();
                 if (line.equals("exit")) {
                     running = false;
                 }
@@ -217,12 +198,11 @@ public class CrazyServer extends WebSocketServer {
             System.out.println("Stopping server");
             stop(1000);
         } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
         }  
     }
 
     public void sendList (WebSocket conn) {
-        long[] count = getCounts(cList);
+        long[] count = getCounts(clientList);
 
         JSONObject list = new JSONObject("{}");
         list.put("type", "list");
@@ -275,5 +255,33 @@ public class CrazyServer extends WebSocketServer {
         });
 
         return counts;
+    }
+    
+    private void log(String log, int type) {
+        String serverMessage;
+        
+        switch(type) {
+            case ERROR:
+                serverMessage = RED + SERVER_PREFIX + log + RESET;
+                break;
+            
+            case UPDATE:
+                serverMessage = GREEN + SERVER_PREFIX + log + RESET;
+                break;
+                
+            case CONNECTION:
+                serverMessage = YELLOW + SERVER_PREFIX + log + RESET;
+                break;
+                
+            default:
+                serverMessage = SERVER_PREFIX + log;
+                break;
+        }
+        
+        System.out.print(serverMessage + "\n");
+    }
+    
+    private void printMessage(JSONObject printRequest) {
+        //String context 
     }
 }
