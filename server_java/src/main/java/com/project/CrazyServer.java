@@ -89,7 +89,7 @@ public class CrazyServer extends WebSocketServer {
     @Override
     public void onOpen(WebSocket connection, ClientHandshake handshake) {
         String clientId = getConnectionId(connection);
-        Client emptyClient = new Client("UNAUTHORIZED", connection, null);
+        Client unauthorizedClient = new Client(clientId, connection, null);
 
         JSONObject welcomeMessage = new JSONObject("{}");
         welcomeMessage.put("type", "private");
@@ -105,7 +105,7 @@ public class CrazyServer extends WebSocketServer {
         connectedMessage.put("id", clientId);
         connection.send(connectedMessage.toString());
 
-        clientList.put(connection, emptyClient);
+        clientList.put(connection, unauthorizedClient);
         String host = connection.getRemoteSocketAddress().getAddress().getHostAddress();
         log("New client (" + clientId + "): " + host, CONNECTION);
 
