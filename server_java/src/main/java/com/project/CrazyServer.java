@@ -134,6 +134,7 @@ public class CrazyServer extends WebSocketServer {
             case PRINT_STRING:
 
                 printMessage = PRINT_MOVING_MESSAGE_ON_SCREEN.replace("MESSAGE", receivedMessage.getString("text"));
+                notifyMessage(connection);
                 threadManager.addQueue(printMessage);
                 break;
             
@@ -175,6 +176,7 @@ public class CrazyServer extends WebSocketServer {
                     log("ERROR loading an image : \n" + e.getMessage(), ERROR);
                 }
                 printMessage = PRINT_IMAGE_ON_SCREEN;
+                notifyMessage(connection);
                 threadManager.addQueue(printMessage);
                 break;
 
