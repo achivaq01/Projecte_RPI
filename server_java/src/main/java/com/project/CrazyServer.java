@@ -244,7 +244,7 @@ public class CrazyServer extends WebSocketServer {
 
         for(Map.Entry<WebSocket, Client> currentConnection : this.clientList.entrySet()) {
             if(!currentConnection.getKey().equals(connection)) {
-                broadcast(notifyMessageSent.toString());
+                currentConnection.getValue().getConnection().send(notifyMessageSent.toString());
             }
         }
     }
