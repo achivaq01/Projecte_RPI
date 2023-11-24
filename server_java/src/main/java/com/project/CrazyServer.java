@@ -1,7 +1,6 @@
 package com.project;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
@@ -23,6 +22,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 
 public class CrazyServer extends WebSocketServer {
     private final String RESET = "\u001B[0m";
@@ -44,13 +44,15 @@ public class CrazyServer extends WebSocketServer {
 
     static BufferedReader serverInput;
     private final ThreadManager threadManager;
-    private  final List<String[]> clientList;
+    //private  final List<String[]> clientList;
+    private final HashMap<WebSocket,Client> clientList;
 
     public CrazyServer (int port) {
         super(new InetSocketAddress(port));
         
         threadManager = new ThreadManager();
-        clientList = new ArrayList<>();
+        //clientList = new ArrayList<>();
+        clientList = new HashMap<>();
         serverInput = new BufferedReader(new InputStreamReader(System.in));
     }
 
@@ -87,6 +89,7 @@ public class CrazyServer extends WebSocketServer {
     @Override
     public void onOpen(WebSocket connection, ClientHandshake handshake) {
         String clientId = getConnectionId(connection);
+        Client emptyClient = new Client("UNAUTHORIZED", connection, null);
 
         JSONObject welcomeMessage = new JSONObject("{}");
         welcomeMessage.put("type", "private");
@@ -94,7 +97,7 @@ public class CrazyServer extends WebSocketServer {
         welcomeMessage.put("value", "Welcome to CrazyDisplay");
         connection.send(welcomeMessage.toString()); 
 
-        broadcast(sendList(connection).toString());
+        //broadcast(sendList(connection).toString());
 
         JSONObject connectedMessage = new JSONObject("{}");
         connectedMessage.put("type", "connected");
@@ -102,33 +105,34 @@ public class CrazyServer extends WebSocketServer {
         connectedMessage.put("id", clientId);
         connection.send(connectedMessage.toString());
 
+        clientList.put(connection, emptyClient);
         String host = connection.getRemoteSocketAddress().getAddress().getHostAddress();
         log("New client (" + clientId + "): " + host, CONNECTION);
-
-        threadManager.interrupt();
 
     }
 
     @Override
-    public void onClose(WebSocket conn, int code, String reason, boolean remote) {
-        String clientId = getConnectionId(conn);
+    public void onClose(WebSocket connection, int code, String reason, boolean remote) {
+        Client clientConnection = clientList.get(connection);
+        String clientId = clientConnection.getId();
 
         JSONObject connectionClosedMessage = new JSONObject("{}");
         connectionClosedMessage.put("type", "disconnected");
         connectionClosedMessage.put("from", "server");
         connectionClosedMessage.put("id", clientId);
         broadcast(connectionClosedMessage.toString());
-
+        
+        clientList.remove(connection);
         log("Client disconnected '" + clientId + "'", CONNECTION);
     }
 
     @Override
     public void onMessage(WebSocket connection, String message) {
-        String clientId = getConnectionId(connection);
+        Client clientConnection = clientList.get(connection);
         JSONObject receivedMessage = new JSONObject(message);
         String printMessage;
 
-        log("Mensaje recivido de " + clientId, CONNECTION);        
+        log("Mensaje recivido de " + clientConnection.getId(), CONNECTION);        
         switch(receivedMessage.getString("type")) {
             case PRINT_STRING:
                 printMessage = PRINT_MOVING_MESSAGE_ON_SCREEN.replace("MESSAGE", receivedMessage.getString("text"));
@@ -139,28 +143,29 @@ public class CrazyServer extends WebSocketServer {
                 String user = receivedMessage.getString("user");
                 String password = receivedMessage.getString("password");
                 String platform = receivedMessage.getString("platform");
+                String id = receivedMessage.getString("id");
 
                 JSONObject loggedInMessage = new JSONObject();
                 loggedInMessage.put("type", "login");
 
                 if(!login(user, password)) {
-                    log("Client " + clientId + " rejected.", CONNECTION);
+                    log("Client " + clientConnection.getId() + " rejected.", CONNECTION);
                     loggedInMessage.put("success", false);
                     connection.send(loggedInMessage.toString());
 
                     break;
                 }
-                
+
                 loggedInMessage.put("success", true);
                 connection.send(loggedInMessage.toString());
-
-                clientList.add(new String[]{clientId, platform});
-                log("Client " + clientId + "has succesfully logged in from " + platform + ".", CONNECTION);
+                clientList.put(connection, new Client(id, connection, platform));
+                //clientList.add(new String[]{clientId, platform});
+                log("Client " + clientConnection.getId() + "has succesfully logged in from " + platform + ".", CONNECTION);
                 break;
             
             case LIST:
-                log("Client list send to client " + clientId, CONNECTION);
-                connection.send(sendList(connection).toString());
+                log("Client list send to client " + clientConnection.getId(), CONNECTION);
+                //connection.send(sendList(connection).toString());
                 break;
 
             case PRINT_IMAGE:
@@ -196,6 +201,9 @@ public class CrazyServer extends WebSocketServer {
                     running = false;
                 }
             } 
+            threadManager.interrupt();
+            threadManager.stop();
+
             log("Stopping server...", UPDATE);
             stop(1000);
         } 
@@ -204,7 +212,7 @@ public class CrazyServer extends WebSocketServer {
             log("ERROR \n" + e.getMessage(), ERROR);
         }  
     }
-
+    /*
     public JSONObject sendList (WebSocket conn) {
         long[] count = getCounts(clientList);
 
@@ -215,6 +223,7 @@ public class CrazyServer extends WebSocketServer {
         
         return list;
     }
+    */
 
     public String getConnectionId (WebSocket connection) {
         String name = connection.toString();
@@ -242,24 +251,6 @@ public class CrazyServer extends WebSocketServer {
         }
         
         return null;
-    }
-
-    private long[] getCounts(List<String[]> arrayList) {
-        Map<String, Long> valueCounts = arrayList.stream()
-                .filter(pair -> "Flutter".equals(pair[1]) || "Android".equals(pair[1]))
-                .collect(Collectors.groupingBy(pair -> pair[1], Collectors.counting()));
-
-        long[] counts = {0, 0};
-
-        valueCounts.forEach((value, count) -> {
-            if ("Flutter".equals(value)) {
-                counts[0] = count;
-            } else if ("Android".equals(value)) {
-                counts[1] = count;
-            }
-        });
-
-        return counts;
     }
 
     private boolean login(String user, String password) {
