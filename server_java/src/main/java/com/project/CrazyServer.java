@@ -191,9 +191,10 @@ public class CrazyServer extends WebSocketServer {
     }
 
     public void sendClientList() {
-        log("Sending client list...", UPDATE);
-
+        JSONObject message = new JSONObject();
         JSONArray clientList = new JSONArray();
+        
+        message.put("type", "list");
         for(Map.Entry<WebSocket, Client> connection : this.clientList.entrySet()) {
             Client connectionClient = connection.getValue();
             String connectionId = connectionClient.getId();
@@ -205,8 +206,10 @@ public class CrazyServer extends WebSocketServer {
 
             clientList.put(client);
         }
+        message.put("list", clientList);
 
-        broadcast(clientList.toString());
+        log("Sending client list...", UPDATE);
+        broadcast(message.toString());
     }
 
     public void runServerBucle () {
