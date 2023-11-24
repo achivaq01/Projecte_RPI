@@ -9,20 +9,16 @@ import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.Base64;
+import java.util.HashMap;
 
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 import org.json.JSONObject;
 import org.json.JSONArray;
-
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.HashMap;
 
 public class CrazyServer extends WebSocketServer {
     private final String RESET = "\u001B[0m";
@@ -136,9 +132,6 @@ public class CrazyServer extends WebSocketServer {
         log("Mensaje recivido de " + clientConnection.getId(), CONNECTION);        
         switch(receivedMessage.getString("type")) {
             case PRINT_STRING:
-                JSONObject notifyMessageSent = new JSONObject();
-                notifyMessageSent.put("type", "new message");
-                notifyMessageSent.put("id", clientConnection.getId());
 
                 printMessage = PRINT_MOVING_MESSAGE_ON_SCREEN.replace("MESSAGE", receivedMessage.getString("text"));
                 threadManager.addQueue(printMessage);
@@ -240,18 +233,19 @@ public class CrazyServer extends WebSocketServer {
             log("ERROR \n" + e.getMessage(), ERROR);
         }  
     }
-    /*
-    public JSONObject sendList (WebSocket conn) {
-        long[] count = getCounts(clientList);
+    public void notifyMessage(WebSocket connection) {
+        Client clientConnection = clientList.get(connection);
+        JSONObject notifyMessageSent = new JSONObject();
 
-        JSONObject list = new JSONObject("{}");
-        list.put("type", "list");
-        list.put("flutter", count[0]);
-        list.put("android", count[1]);
-        
-        return list;
+        notifyMessageSent.put("type", "new message");
+        notifyMessageSent.put("id", clientConnection.getId());
+
+        for(Map.Entry<WebSocket, Client> currentConnection : this.clientList.entrySet()) {
+            if(!currentConnection.getKey().equals(connection)) {
+                broadcast(notifyMessageSent.toString());
+            }
+        }
     }
-    */
 
     public String getConnectionId (WebSocket connection) {
         String name = connection.toString();
