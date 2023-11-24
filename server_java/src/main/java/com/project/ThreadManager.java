@@ -32,7 +32,7 @@ class ThreadManager {
             executeCommand();
             
             try {
-            TimeUnit.SECONDS.sleep(5);
+            TimeUnit.SECONDS.sleep(2);
 
             } catch (InterruptedException e) {
                 currentThread.interrupt();

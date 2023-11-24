@@ -40,7 +40,7 @@ public class CrazyServer extends WebSocketServer {
     private final String PRINT_IMAGE = "image";
     private final String LOGIN = "login";
     private final String LIST = "list";
-    private final String SERVER_PREFIX = "[SERVER]: ";
+    private final String SERVER_PREFIX = "[" + BRIGHT_MAGENTA + "SERVER" + RESET + "]: ";
     private final String PRINT_MOVING_MESSAGE_ON_SCREEN = "cd ~/dev/rpi-rgb-led-matrix && pwd && text-scroller -f ~/dev/bitmap-fonts/bitmap/cherry/cherry-10-b.bdf --led-cols=64 --led-rows=64 --led-slowdown-gpio=2 --led-no-hardware-pulse 'MESSAGE'";
     private final String PRINT_IMAGE_ON_SCREEN = "cd ~/dev/rpi-rgb-led-matrix && pwd && led-image-viewer -C --led-cols=64 --led-rows=64 --led-slowdown-gpio=4 --led-no-hardware-pulse ~/dev/server/Projecte_RPI/server_java/screenimage.png";
     private final String USERS_JSON_PATH = "data/users.json";
@@ -72,17 +72,16 @@ public class CrazyServer extends WebSocketServer {
         threadManager.start();
         String printIpOnScreen = PRINT_MOVING_MESSAGE_ON_SCREEN.replace("MESSAGE", IP);
 
-        log("WebSockets server running at: ws://" + HOST + ":" + PORT, UPDATE);
-        log("Type 'exit' to stop and exit server.", UPDATE);
-
         setConnectionLostTimeout(0);
         setConnectionLostTimeout(100);
+        threadManager.addQueue("clear");
         
-        threadManager.addQueue("echo ThreadManager started!");
         try {
-            TimeUnit.SECONDS.sleep(5);
+            TimeUnit.SECONDS.sleep(3);
         } catch (InterruptedException e) {
         }
+        log("WebSockets server running at: ws://" + HOST + ":" + PORT, UPDATE);
+        log("Type 'exit' to stop and exit server.", UPDATE);
 
         threadManager.addQueue(printIpOnScreen);
     }
@@ -286,23 +285,23 @@ public class CrazyServer extends WebSocketServer {
         
         switch(type) {
             case ERROR:
-                serverMessage = BRIGHT_MAGENTA + SERVER_PREFIX + RED + log + RESET;
+                serverMessage = SERVER_PREFIX + RED + log + RESET;
                 break;
             
             case UPDATE:
-                serverMessage = BRIGHT_MAGENTA + SERVER_PREFIX + GREEN + log + RESET;
+                serverMessage = SERVER_PREFIX + GREEN + log + RESET;
                 break;
                 
             case CONNECTION:
-                serverMessage = BRIGHT_MAGENTA + SERVER_PREFIX + CYAN + log + RESET;
+                serverMessage = SERVER_PREFIX + CYAN + log + RESET;
                 break;
             
             case DISCONNECTION:
-                serverMessage = BRIGHT_MAGENTA + SERVER_PREFIX + YELLOW + log + RESET;
+                serverMessage = SERVER_PREFIX + YELLOW + log + RESET;
                 break;
             
             case NOTIFICATION:
-                serverMessage = BRIGHT_MAGENTA + SERVER_PREFIX + MAGENTA + log + RESET;
+                serverMessage = SERVER_PREFIX + MAGENTA + log + RESET;
                 break;
                 
             default:
@@ -310,6 +309,6 @@ public class CrazyServer extends WebSocketServer {
                 break;
         }
         
-        System.out.print(serverMessage);
+        System.out.println(serverMessage);
     }
 }
