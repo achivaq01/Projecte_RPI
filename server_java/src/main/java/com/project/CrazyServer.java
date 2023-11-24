@@ -25,10 +25,17 @@ public class CrazyServer extends WebSocketServer {
     private final String RED = "\u001B[31m";
     private final String GREEN = "\u001B[32m";
     private final String YELLOW = "\u001B[33m";
+    public static final String BLUE = "\u001B[34m";
+    public static final String MAGENTA = "\u001B[35m";
+    public static final String CYAN = "\u001B[36m";
+    public static final String BRIGHT_MAGENTA = "\u001B[95m";
+    public static final String BRIGHT_YELLOW = "\u001B[93m";
     
     private final int ERROR = -1;
     private final int UPDATE = 0;
     private final int CONNECTION = 1;
+    private final int DISCONNECTION = 2;
+    private final int NOTIFICATION = 3;
     private final String PRINT_STRING = "string";
     private final String PRINT_IMAGE = "image";
     private final String LOGIN = "login";
@@ -40,14 +47,12 @@ public class CrazyServer extends WebSocketServer {
 
     static BufferedReader serverInput;
     private final ThreadManager threadManager;
-    //private  final List<String[]> clientList;
     private final HashMap<WebSocket,Client> clientList;
 
     public CrazyServer (int port) {
         super(new InetSocketAddress(port));
         
         threadManager = new ThreadManager();
-        //clientList = new ArrayList<>();
         clientList = new HashMap<>();
         serverInput = new BufferedReader(new InputStreamReader(System.in));
     }
@@ -120,7 +125,7 @@ public class CrazyServer extends WebSocketServer {
         
         clientList.remove(connection);
         sendClientList();
-        log("Client disconnected '" + clientId + "'", CONNECTION);
+        log("Client disconnected '" + clientId + "'", DISCONNECTION);
     }
 
     @Override
@@ -129,7 +134,7 @@ public class CrazyServer extends WebSocketServer {
         JSONObject receivedMessage = new JSONObject(message);
         String printMessage;
 
-        log("Mensaje recivido de " + clientConnection.getId(), CONNECTION);        
+        log("Mensaje recivido de " + clientConnection.getId(), NOTIFICATION);        
         switch(receivedMessage.getString("type")) {
             case PRINT_STRING:
 
@@ -164,7 +169,7 @@ public class CrazyServer extends WebSocketServer {
                 break;
             
             case LIST:
-                log("Client list send to client " + clientConnection.getId(), CONNECTION);
+                log("Client list send to client " + clientConnection.getId(), NOTIFICATION);
                 //connection.send(sendList(connection).toString());
                 break;
 
@@ -173,7 +178,7 @@ public class CrazyServer extends WebSocketServer {
                 try {
                     Files.write(Paths.get("screenimage.png"), decodedImage);
                 } catch (IOException e) {
-                    log("ERROR loading an image : \n" + e.getMessage(), ERROR);
+                    log("ERROR loading an image :" + e.getMessage(), ERROR);
                 }
                 printMessage = PRINT_IMAGE_ON_SCREEN;
                 notifyMessage(connection);
@@ -207,7 +212,7 @@ public class CrazyServer extends WebSocketServer {
         }
         message.put("list", clientList);
 
-        log("Sending client list...", UPDATE);
+        log("Sending client list...", NOTIFICATION);
         broadcast(message.toString());
     }
 
@@ -232,7 +237,7 @@ public class CrazyServer extends WebSocketServer {
         } 
         catch (IOException | InterruptedException e) 
         {
-            log("ERROR \n" + e.getMessage(), ERROR);
+            log("ERROR " + e.getMessage(), ERROR);
         }  
     }
     public void notifyMessage(WebSocket connection) {
@@ -254,29 +259,6 @@ public class CrazyServer extends WebSocketServer {
         return name.replaceAll("org.java_websocket.WebSocketImpl@", "").substring(0, 3);
     }
 
-    public String[] getClients () {
-        int length = getConnections().size();
-        String[] clients = new String[length];
-        int cnt = 0;
-
-        for (WebSocket ws : getConnections()) {
-            clients[cnt] = getConnectionId(ws);               
-            cnt++;
-        }
-        return clients;
-    }
-
-    public WebSocket getClientById (String clientId) {
-        for (WebSocket webSocket : getConnections()) {
-            String wsId = getConnectionId(webSocket);
-            if (clientId.compareTo(wsId) == 0) {
-                return webSocket;
-            }               
-        }
-        
-        return null;
-    }
-
     private boolean login(String user, String password) {
         try {
             String usersContent = new String(Files.readAllBytes(Path.of(USERS_JSON_PATH)));
@@ -293,7 +275,7 @@ public class CrazyServer extends WebSocketServer {
             return false;
 
         } catch (IOException e) {
-            log("ERROR\n" + e.getMessage(), ERROR);
+            log("ERROR " + e.getMessage(), ERROR);
             return false;
         }
 
@@ -304,15 +286,23 @@ public class CrazyServer extends WebSocketServer {
         
         switch(type) {
             case ERROR:
-                serverMessage = RED + SERVER_PREFIX + log + RESET;
+                serverMessage = BRIGHT_MAGENTA + SERVER_PREFIX + RED + log + RESET;
                 break;
             
             case UPDATE:
-                serverMessage = GREEN + SERVER_PREFIX + log + RESET;
+                serverMessage = BRIGHT_MAGENTA + SERVER_PREFIX + GREEN + log + RESET;
                 break;
                 
             case CONNECTION:
-                serverMessage = YELLOW + SERVER_PREFIX + log + RESET;
+                serverMessage = BRIGHT_MAGENTA + SERVER_PREFIX + CYAN + log + RESET;
+                break;
+            
+            case DISCONNECTION:
+                serverMessage = BRIGHT_MAGENTA + SERVER_PREFIX + YELLOW + log + RESET;
+                break;
+            
+            case NOTIFICATION:
+                serverMessage = BRIGHT_MAGENTA + SERVER_PREFIX + MAGENTA + log + RESET;
                 break;
                 
             default:
@@ -320,6 +310,6 @@ public class CrazyServer extends WebSocketServer {
                 break;
         }
         
-        System.out.print(serverMessage + "\n");
+        System.out.print(serverMessage);
     }
 }
