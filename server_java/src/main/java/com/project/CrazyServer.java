@@ -123,6 +123,7 @@ public class CrazyServer extends WebSocketServer {
         broadcast(connectionClosedMessage.toString());
         
         clientList.remove(connection);
+        sendClientList();
         log("Client disconnected '" + clientId + "'", CONNECTION);
     }
 
@@ -159,8 +160,9 @@ public class CrazyServer extends WebSocketServer {
                 loggedInMessage.put("success", true);
                 connection.send(loggedInMessage.toString());
                 clientList.put(connection, new Client(id, connection, platform));
+                sendClientList();
                 //clientList.add(new String[]{clientId, platform});
-                log("Client " + clientConnection.getId() + "has succesfully logged in from " + platform + ".", CONNECTION);
+                log("Client " + clientConnection.getId() + " has succesfully logged in from " + platform + ".", CONNECTION);
                 break;
             
             case LIST:
@@ -186,6 +188,25 @@ public class CrazyServer extends WebSocketServer {
     public void onError(WebSocket conn, Exception ex) {
         log("ERROR" + ex.getMessage(), ERROR);
 
+    }
+
+    public void sendClientList() {
+        log("Sending client list...", UPDATE);
+
+        JSONArray clientList = new JSONArray();
+        for(Map.Entry<WebSocket, Client> connection : this.clientList.entrySet()) {
+            Client connectionClient = connection.getValue();
+            String connectionId = connectionClient.getId();
+            String connectionPlatform = connectionClient.getPlatform();
+
+            JSONObject client = new JSONObject();
+            client.put("id", connectionId);
+            client.put("platform", connectionPlatform);
+
+            clientList.put(client);
+        }
+
+        broadcast(clientList.toString());
     }
 
     public void runServerBucle () {
