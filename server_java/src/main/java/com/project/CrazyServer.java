@@ -136,6 +136,10 @@ public class CrazyServer extends WebSocketServer {
         log("Mensaje recivido de " + clientConnection.getId(), CONNECTION);        
         switch(receivedMessage.getString("type")) {
             case PRINT_STRING:
+                JSONObject notifyMessageSent = new JSONObject();
+                notifyMessageSent.put("type", "new message");
+                notifyMessageSent.put("id", clientConnection.getId());
+
                 printMessage = PRINT_MOVING_MESSAGE_ON_SCREEN.replace("MESSAGE", receivedMessage.getString("text"));
                 threadManager.addQueue(printMessage);
                 break;
