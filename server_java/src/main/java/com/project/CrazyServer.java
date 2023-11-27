@@ -133,10 +133,10 @@ public class CrazyServer extends WebSocketServer {
         clientList.remove(connection);
         if(clientList.isEmpty()) {
             threadManager.addQueue(PRINT_MOVING_MESSAGE_ON_SCREEN.replace("MESSAGE", IP));
+            log("The client list is now empty", UPDATE);
         }
         sendClientList();
         log("Client disconnected '" + clientConnection.getId() + "'", DISCONNECTION);
-        log("The client list is now empty", UPDATE);
     }
 
     @Override
