@@ -122,7 +122,7 @@ public class CrazyServer extends WebSocketServer {
     public void onClose(WebSocket connection, int code, String reason, boolean remote) {
         Client clientConnection = clientList.get(connection);
 
-        if(clientId.isEmpty()) {
+        if(clientList.isEmpty()) {
             threadManager.addQueue(PRINT_MOVING_MESSAGE_ON_SCREEN.replace("MESSAGE", IP));
         }
         
