@@ -94,10 +94,6 @@ public class CrazyServer extends WebSocketServer {
         Client unauthorizedClient = new Client(clientId, connection, null);
         String lastCommand = threadManager.getLastCommand();
 
-        if(!clientList.isEmpty() && lastCommand.equals(PRINT_MOVING_MESSAGE_ON_SCREEN.replace("MESSAGE", IP))) {
-            threadManager.interrupt();
-        }
-
         JSONObject welcomeMessage = new JSONObject("{}");
         welcomeMessage.put("type", "private");
         welcomeMessage.put("from", "server");
@@ -114,6 +110,12 @@ public class CrazyServer extends WebSocketServer {
 
         clientList.put(connection, unauthorizedClient);
         String host = connection.getRemoteSocketAddress().getAddress().getHostAddress();
+
+        if(!clientList.isEmpty() && lastCommand.equals(PRINT_MOVING_MESSAGE_ON_SCREEN.replace("MESSAGE", IP))) {
+            log("Removing the IP from display...", UPDATE);
+            threadManager.interrupt();
+        }
+        
         log("New client (" + clientId + "): " + host, CONNECTION);
 
     }
@@ -121,10 +123,6 @@ public class CrazyServer extends WebSocketServer {
     @Override
     public void onClose(WebSocket connection, int code, String reason, boolean remote) {
         Client clientConnection = clientList.get(connection);
-
-        if(clientList.isEmpty()) {
-            threadManager.addQueue(PRINT_MOVING_MESSAGE_ON_SCREEN.replace("MESSAGE", IP));
-        }
         
         JSONObject connectionClosedMessage = new JSONObject("{}");
         connectionClosedMessage.put("type", "disconnected");
@@ -133,8 +131,12 @@ public class CrazyServer extends WebSocketServer {
         broadcast(connectionClosedMessage.toString());
         
         clientList.remove(connection);
+        if(clientList.isEmpty()) {
+            threadManager.addQueue(PRINT_MOVING_MESSAGE_ON_SCREEN.replace("MESSAGE", IP));
+        }
         sendClientList();
         log("Client disconnected '" + clientConnection.getId() + "'", DISCONNECTION);
+        log("The client list is now empty", UPDATE);
     }
 
     @Override
