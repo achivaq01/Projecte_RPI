@@ -110,6 +110,19 @@ public class CrazyServer extends WebSocketServer {
 
         clientList.put(connection, unauthorizedClient);
         String host = connection.getRemoteSocketAddress().getAddress().getHostAddress();
+        
+        sendClientList();
+        if(!clientList.isEmpty()) {
+            JSONObject newConnection = new JSONObject();
+            newConnection.put("type", "new connection");
+            newConnection.put("id", clientId);
+
+            for(Map.Entry<WebSocket, Client> connected : clientList.entrySet()) {
+                if(!connected.getKey().equals(connection)) {
+                    connected.getKey().send(newConnection.toString());
+                }
+            }
+        }
 
         if(!clientList.isEmpty() && lastCommand.equals(PRINT_MOVING_MESSAGE_ON_SCREEN.replace("MESSAGE", IP))) {
             log("Removing the IP from display...", UPDATE);
@@ -136,6 +149,17 @@ public class CrazyServer extends WebSocketServer {
             log("The client list is now empty", UPDATE);
         }
         sendClientList();
+        if(!clientList.isEmpty()) {
+            JSONObject newConnection = new JSONObject();
+            newConnection.put("type", "new disconnection");
+            newConnection.put("id", clientConnection.getConnection());
+
+            for(Map.Entry<WebSocket, Client> connected : clientList.entrySet()) {
+                if(!connected.getKey().equals(connection)) {
+                    connected.getKey().send(newConnection.toString());
+                }
+            }
+        }
         log("Client disconnected '" + clientConnection.getId() + "'", DISCONNECTION);
     }
 
@@ -175,18 +199,6 @@ public class CrazyServer extends WebSocketServer {
                 connection.send(loggedInMessage.toString());
                 clientList.put(connection, new Client(id, connection, platform));
 
-                sendClientList();
-                if(!clientList.isEmpty()) {
-                    JSONObject newConnection = new JSONObject();
-                    newConnection.put("type", "new connection");
-                    newConnection.put("id", clientConnection.getId());
-
-                    for(Map.Entry<WebSocket, Client> connected : clientList.entrySet()) {
-                        if(!connected.getKey().equals(clientConnection)) {
-                            connected.getKey().send(newConnection.toString());
-                        }
-                    }
-                }
                 //clientList.add(new String[]{clientId, platform});
                 log("Client " + clientConnection.getId() + " has succesfully logged in from " + platform + ".", CONNECTION);
                 break;
