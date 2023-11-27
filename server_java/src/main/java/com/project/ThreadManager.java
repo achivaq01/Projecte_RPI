@@ -9,6 +9,7 @@ class ThreadManager {
     private final List<JavaCommand> commandQueue;
     private Thread currentThread;
     private Boolean alive;
+    private String lastCommand;
 
     public ThreadManager() {
         super();
@@ -23,6 +24,7 @@ class ThreadManager {
     }
 
     public void addQueue(String command) {
+        lastCommand = command;
         commandQueue.add(JavaCommand.getInstance(command));
 
     }
@@ -65,6 +67,10 @@ class ThreadManager {
     public void interrupt() {
         currentThread.interrupt();
 
+    }
+
+    public String getLastCommand() {
+        return lastCommand;
     }
 
 }

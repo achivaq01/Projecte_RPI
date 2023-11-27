@@ -31,6 +31,8 @@ public class CrazyServer extends WebSocketServer {
     public static final String BRIGHT_MAGENTA = "\u001B[95m";
     public static final String BRIGHT_YELLOW = "\u001B[93m";
     
+    private String IP;
+    private final int SERVER_SLEEP_TIME = 3;
     private final int ERROR = -1;
     private final int UPDATE = 0;
     private final int CONNECTION = 1;
@@ -55,20 +57,20 @@ public class CrazyServer extends WebSocketServer {
         threadManager = new ThreadManager();
         clientList = new HashMap<>();
         serverInput = new BufferedReader(new InputStreamReader(System.in));
+
+        IP = "0.0.0.0";
+        try{
+            IP = Main.getLocalIPAddress();
+        } catch (SocketException | UnknownHostException ex) {
+            log("ERROR There was an issue getting the local IP", ERROR);
+        }
     }
 
     @Override
     public void onStart() {
         final String HOST = getAddress().getAddress().getHostAddress();
         final int PORT = getAddress().getPort();
-        final String IP;
         
-        try{
-            IP = Main.getLocalIPAddress();
-        } catch (SocketException | UnknownHostException ex) {
-            return;
-            
-        }
         threadManager.start();
         String printIpOnScreen = PRINT_MOVING_MESSAGE_ON_SCREEN.replace("MESSAGE", IP);
 
@@ -77,7 +79,7 @@ public class CrazyServer extends WebSocketServer {
         threadManager.addQueue("clear");
         
         try {
-            TimeUnit.SECONDS.sleep(3);
+            TimeUnit.SECONDS.sleep(SERVER_SLEEP_TIME);
         } catch (InterruptedException e) {
         }
         log("WebSockets server running at: ws://" + HOST + ":" + PORT, UPDATE);
@@ -90,6 +92,11 @@ public class CrazyServer extends WebSocketServer {
     public void onOpen(WebSocket connection, ClientHandshake handshake) {
         String clientId = getConnectionId(connection);
         Client unauthorizedClient = new Client(clientId, connection, null);
+        String lastCommand = threadManager.getLastCommand();
+
+        if(!clientList.isEmpty() && lastCommand.equals(PRINT_MOVING_MESSAGE_ON_SCREEN.replace("MESSAGE", IP))) {
+            threadManager.interrupt();
+        }
 
         JSONObject welcomeMessage = new JSONObject("{}");
         welcomeMessage.put("type", "private");
@@ -114,17 +121,20 @@ public class CrazyServer extends WebSocketServer {
     @Override
     public void onClose(WebSocket connection, int code, String reason, boolean remote) {
         Client clientConnection = clientList.get(connection);
-        String clientId = clientConnection.getId();
 
+        if(clientId.isEmpty()) {
+            threadManager.addQueue(PRINT_MOVING_MESSAGE_ON_SCREEN.replace("MESSAGE", IP));
+        }
+        
         JSONObject connectionClosedMessage = new JSONObject("{}");
         connectionClosedMessage.put("type", "disconnected");
         connectionClosedMessage.put("from", "server");
-        connectionClosedMessage.put("id", clientId);
+        connectionClosedMessage.put("id", clientConnection.getId());
         broadcast(connectionClosedMessage.toString());
         
         clientList.remove(connection);
         sendClientList();
-        log("Client disconnected '" + clientId + "'", DISCONNECTION);
+        log("Client disconnected '" + clientConnection.getId() + "'", DISCONNECTION);
     }
 
     @Override
