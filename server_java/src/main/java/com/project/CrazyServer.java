@@ -174,7 +174,19 @@ public class CrazyServer extends WebSocketServer {
                 loggedInMessage.put("success", true);
                 connection.send(loggedInMessage.toString());
                 clientList.put(connection, new Client(id, connection, platform));
+
                 sendClientList();
+                if(!clientList.isEmpty()) {
+                    JSONObject newConnection = new JSONObject();
+                    newConnection.put("type", "new connection");
+                    newConnection.put("id", clientConnection.getId());
+
+                    for(Map.Entry<WebSocket, Client> connected : clientList.entrySet()) {
+                        if(!connected.getKey().equals(clientConnection)) {
+                            connected.getKey().send(newConnection.toString());
+                        }
+                    }
+                }
                 //clientList.add(new String[]{clientId, platform});
                 log("Client " + clientConnection.getId() + " has succesfully logged in from " + platform + ".", CONNECTION);
                 break;
