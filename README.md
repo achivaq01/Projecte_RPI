@@ -80,6 +80,9 @@ Amb aquest codi:
 	<true/>
 	<key>com.apple.security.network.client</key>
 	<true/>
+
+
+https://www.youtube.com/watch?v=tFElUcFx3nY
 	<key>com.apple.security.network.server</key>
 	<true/>
 </dict>
