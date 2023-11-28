@@ -11,6 +11,10 @@ class ThreadManager {
     private Boolean alive;
     private String lastCommand;
 
+    /**
+     * class constructor
+     * 
+     */
     public ThreadManager() {
         super();
 
@@ -19,16 +23,29 @@ class ThreadManager {
         alive = true;
     }
 
+    /**
+     * thread start
+     * 
+     */
     public void start() {
         currentThread.start();
     }
 
+    /**
+     * code to add command to queue
+     * 
+     * @param command
+     */
     public void addQueue(String command) {
         lastCommand = command;
         commandQueue.add(JavaCommand.getInstance(command));
 
     }
 
+    /**
+     * thread main execution bucle
+     * 
+     */
     private void executeCommands() {
         while (alive) {
             executeCommand();
@@ -43,10 +60,18 @@ class ThreadManager {
         }
     }
 
+    /**
+     * thread stop
+     * 
+     */
     public void stop() {
         alive = false;
     }
 
+    /**
+     * thread code to execute queue javaCommands 
+     * 
+     */
     private void executeCommand() {
         if (commandQueue.isEmpty()) {
             return;
@@ -64,11 +89,20 @@ class ThreadManager {
 
     }
 
+    /**
+     * interrupt thread current process
+     * 
+     */
     public void interrupt() {
         currentThread.interrupt();
 
     }
 
+    /**
+     * retrieve string from the last command
+     * 
+     * @return
+     */
     public String getLastCommand() {
         return lastCommand;
     }

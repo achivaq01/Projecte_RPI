@@ -9,6 +9,11 @@ class JavaCommand implements  Runnable{
     private final ProcessBuilder builder;
     private Process process;
 
+    /**
+     * private constructor of the class
+     * 
+     * @param command
+     */
     private JavaCommand(String command) {
         super();
 
@@ -18,6 +23,12 @@ class JavaCommand implements  Runnable{
         builder.inheritIO();
     }
 
+    /**
+     * singleton method to get the class instance
+     * 
+     * @param command
+     * @return
+     */
     public static synchronized JavaCommand getInstance(String command) {
         if(instance == null) {
             instance = new JavaCommand(command);
@@ -28,6 +39,10 @@ class JavaCommand implements  Runnable{
         return instance;
     }
 
+    /**
+     * run process
+     * 
+     */
     @Override
     public void run() {
         try {
@@ -40,6 +55,11 @@ class JavaCommand implements  Runnable{
         }
     }
 
+    /**
+     * command String getter
+     * 
+     * @return
+     */
     public String getCommand() {
         return command;
     }
