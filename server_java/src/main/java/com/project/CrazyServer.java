@@ -51,6 +51,11 @@ public class CrazyServer extends WebSocketServer {
     private final ThreadManager threadManager;
     private final HashMap<WebSocket,Client> clientList;
 
+    /**
+     * class constructor
+     * 
+     * @param port
+     */
     public CrazyServer (int port) {
         super(new InetSocketAddress(port));
         
@@ -66,6 +71,10 @@ public class CrazyServer extends WebSocketServer {
         }
     }
 
+    /**
+     * on server start code
+     * 
+     */
     @Override
     public void onStart() {
         final String HOST = getAddress().getAddress().getHostAddress();
@@ -88,6 +97,10 @@ public class CrazyServer extends WebSocketServer {
         threadManager.addQueue(printIpOnScreen);
     }
 
+    /**
+     * on client connection code
+     * 
+     */
     @Override
     public void onOpen(WebSocket connection, ClientHandshake handshake) {
         String clientId = getConnectionId(connection);
@@ -99,8 +112,6 @@ public class CrazyServer extends WebSocketServer {
         welcomeMessage.put("from", "server");
         welcomeMessage.put("value", "Welcome to CrazyDisplay");
         connection.send(welcomeMessage.toString()); 
-
-        //broadcast(sendList(connection).toString());
 
         JSONObject connectedMessage = new JSONObject("{}");
         connectedMessage.put("type", "connected");
@@ -120,6 +131,10 @@ public class CrazyServer extends WebSocketServer {
 
     }
 
+    /**
+     * on client disconnection
+     * 
+     */
     @Override
     public void onClose(WebSocket connection, int code, String reason, boolean remote) {
         Client clientConnection = clientList.get(connection);
@@ -151,6 +166,10 @@ public class CrazyServer extends WebSocketServer {
         log("Client disconnected '" + clientConnection.getId() + "'", DISCONNECTION);
     }
 
+    /**
+     * on received message code
+     * 
+     */
     @Override
     public void onMessage(WebSocket connection, String message) {
         Client clientConnection = clientList.get(connection);
@@ -224,6 +243,10 @@ public class CrazyServer extends WebSocketServer {
         }
     }
 
+    /**
+     * on connection error code
+     * 
+     */
     @Override
     public void onError(WebSocket conn, Exception ex) {
         log("ERROR" + ex.getMessage(), ERROR);
@@ -252,6 +275,10 @@ public class CrazyServer extends WebSocketServer {
         broadcast(message.toString());
     }
 
+    /**
+     * main server bucle
+     * 
+     */
     public void runServerBucle () {
         boolean running = true;
         try 
@@ -276,6 +303,12 @@ public class CrazyServer extends WebSocketServer {
             log("ERROR " + e.getMessage(), ERROR);
         }  
     }
+
+    /**
+     * send new message notification to clients
+     * 
+     * @param connection
+     */
     public void notifyMessage(WebSocket connection) {
         Client clientConnection = clientList.get(connection);
         JSONObject notifyMessageSent = new JSONObject();
@@ -290,6 +323,12 @@ public class CrazyServer extends WebSocketServer {
         }
     }
 
+    /**
+     * generate client id from connection
+     * 
+     * @param connection
+     * @return
+     */
     public String getConnectionId (WebSocket connection) {
         String name = connection.toString();
         return name.replaceAll("org.java_websocket.WebSocketImpl@", "").substring(0, 3);
@@ -317,6 +356,12 @@ public class CrazyServer extends WebSocketServer {
 
     }
     
+    /**
+     * custom log method
+     * 
+     * @param log
+     * @param type
+     */
     private void log(String log, int type) {
         String serverMessage;
         
