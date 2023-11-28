@@ -152,7 +152,7 @@ public class CrazyServer extends WebSocketServer {
         }
 
         sendClientList();
-        if(!clientList.isEmpty() && !clientConnection.getPlatform().equals(null)) {
+        if(!clientList.isEmpty() && clientConnection.getPlatform()!=null) {
             JSONObject newConnection = new JSONObject();
             newConnection.put("type", "new disconnection");
             newConnection.put("id", clientConnection.getId());
